@@ -1237,6 +1237,7 @@ class CreateELBView(BaseELBView):
             cross_zone_enabled = self.request.params.get('cross_zone_enabled') or False
             instances = self.request.params.getall('instances') or None
             backend_certificates = self.request.params.get('backend_certificates') or None
+            auto_update_security_groups = self.request.params.get('auto_update_security_groups') == 'on'
             with boto_error_handler(self.request, self.request.route_path('elbs')):
                 self.log_request(_(u"Creating elastic load balancer {0}").format(name))
                 if vpc_subnet is None:
@@ -1259,6 +1260,8 @@ class CreateELBView(BaseELBView):
                 self.set_security_policy(name)
                 if self.request.params.get('logging_enabled') == 'y':
                     self.configure_access_logs(elb_name=name)
+                if vpc_network is not None and auto_update_security_groups:
+                    pass  # TODO: Auto-configure ports in security group(s)
                 prefix = _(u'Successfully created elastic load balancer')
                 msg = u'{0} {1}'.format(prefix, name)
                 location = self.request.route_path('elbs')

@@ -33,6 +33,8 @@
                         <input type="checkbox" name="elb_ssl_server_order_pref" id="ssl_server_order_pref_hidden_input" />
                         <input type="checkbox" name="elb_ssl_using_custom_policy" id="ssl_using_custom_policy" />
                     </div>
+                    <input type="checkbox" ng-model="autoUpdateSecurityGroups" class="hide"
+                           name="auto_update_security_groups" id="auto_update_security_groups" />
                     <dl id="wizard-tabs" class="tabs" data-tab="" ng-cloak="">
                         <dd ng-repeat="tab in tabList" ng-class="{disabled: invalidSteps[$index]}" ng-show="tab.render"
                                 class="active">

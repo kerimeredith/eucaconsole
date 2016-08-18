@@ -1,14 +1,10 @@
 <!--! ELB Security Group rules warning dialog -->
 <div i18n:domain="eucaconsole">
     <div id="elb-security-group-rules-warning-modal" class="reveal-modal medium" data-reveal="">
-        <h3 i18n:translate="">WARNING: Additional security group rules needed</h3>
+        <h3 i18n:translate="">WARNING: Security group(s) update required</h3>
         <p i18n:translate="">
-            Your load balancer will be inaccessible until you open all traffic to the ports you
-            specified in your listeners and health check.
-        </p>
-        <p i18n:translate="">
-            Please update your selected security group(s) after your load balancer is created to
-            add rules that open all traffic to the following ports.
+            Your load balancer will be inaccessible until you update the following security group(s)
+            and open the ports you specified in your listeners and health check to all traffic.
         </p>
         <div class="row" ng-repeat="sgroup in selectedSecurityGroups track by $index">
             <div class="large-4 small-4 columns">
@@ -26,6 +22,10 @@
             <div class="row"><div class="columns">&nbsp;</div></div>
         </div>
         <div>&nbsp;</div>
+        <div class="row controls-wrapper">
+            <input type="checkbox" checked="checked" ng-model="autoUpdateSecurityGroups" />
+            <label i18n:translate="">Update the security group for me</label>
+        </div>
         <button class="expand" i18n:translate="" tal:condition="create" ng-click="createELB($event, true)">
             I Understand, Create Load Balancer
         </button>

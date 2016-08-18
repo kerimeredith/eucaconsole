@@ -83,6 +83,7 @@ angular.module('ELBWizard', [
     $scope.accessLogConfirmationDialog = $('#elb-bucket-access-log-dialog');
     $scope.accessLogConfirmationDialogKey = 'doNotShowAccessLogConfirmationAgain';
     $scope.instanceCounts = {};
+    $scope.autoUpdateSecurityGroups = true;
     $scope.initController = function (optionsJson) {
         var options = JSON.parse(eucaUnescapeJson(optionsJson));
         $scope.setInitialValues(options);
