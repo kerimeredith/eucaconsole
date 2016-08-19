@@ -272,9 +272,9 @@ class BaseELBView(TaggedItemView):
         else:
             self.can_list_certificates = False
 
-    def get_elb(self):
+    def get_elb(self, elb_name=None):
         if self.elb_conn:
-            elb_param = self.request.matchdict.get('id')
+            elb_param = elb_name or self.request.matchdict.get('id')
             elbs = self.elb_conn.get_all_load_balancers(load_balancer_names=[elb_param])
             return elbs[0] if elbs else None
         return None
@@ -316,6 +316,39 @@ class BaseELBView(TaggedItemView):
             target=ping_target
         )
         self.elb_conn.configure_health_check(name, health_check)
+
+    def configure_security_groups(self, listener_args, elb=None, elb_name=None):
+        """
+        Ensure ELB in a VPC has security group(s) with necessary inbound/outbound rules
+        Note: All security groups in the ELB must have rules to open the necessary
+              ports based on the listeners and health check.
+
+        Provide either ELB object or load balancer name
+
+        """
+        elb = elb or self.get_elb(elb_name=elb_name)
+        inbound_listener_ports = [str(listener[0]) for listener in listener_args]
+        outbound_listener_ports = [str(listener[1]) for listener in listener_args]
+        health_check_ping_port = self.request.params.get('ping_port')
+        outbound_listener_ports.extend([health_check_ping_port])
+        security_group_ids = elb.security_groups
+        security_groups = self.ec2_conn.get_all_security_groups(filters={'group-id': security_group_ids})
+
+        for sgroup in security_groups:
+            # Update inbound rules
+            inbound_rules = sgroup.rules
+            existing_inbound_ports = [rule.from_port for rule in inbound_rules]
+            missing_inbound_ports = [port for port in inbound_listener_ports if port not in existing_inbound_ports]
+            for port in missing_inbound_ports:
+                port = int(port)
+                cidr = '0.0.0.0/0'  # TODO: Determine security implications of this (display warning to user?)
+                sgroup.authorize('tcp', port, port, cidr)
+
+            # Update outbound rules
+            outbound_rules = sgroup.rules_egress
+            has_all_outbound_open = bool([rule.ip_protocol for rule in outbound_rules if rule.ip_protocol == '-1'])
+            if not has_all_outbound_open:
+                pass  # TODO: update outbound rules
 
     def configure_access_logs(self, elb_name=None, elb=None):
         req_params = self.request.params
@@ -1261,7 +1294,7 @@ class CreateELBView(BaseELBView):
                 if self.request.params.get('logging_enabled') == 'y':
                     self.configure_access_logs(elb_name=name)
                 if vpc_network is not None and auto_update_security_groups:
-                    pass  # TODO: Auto-configure ports in security group(s)
+                    self.configure_security_groups(listeners_args, elb_name=name)
                 prefix = _(u'Successfully created elastic load balancer')
                 msg = u'{0} {1}'.format(prefix, name)
                 location = self.request.route_path('elbs')
