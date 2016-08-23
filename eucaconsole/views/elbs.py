@@ -333,6 +333,7 @@ class BaseELBView(TaggedItemView):
         outbound_listener_ports.extend([health_check_ping_port])
         security_group_ids = elb.security_groups
         security_groups = self.ec2_conn.get_all_security_groups(filters={'group-id': security_group_ids})
+        cidr = '0.0.0.0/0'  # TODO: Determine security implications of this (display warning to user?)
 
         for sgroup in security_groups:
             # Update inbound rules
@@ -341,14 +342,18 @@ class BaseELBView(TaggedItemView):
             missing_inbound_ports = [port for port in inbound_listener_ports if port not in existing_inbound_ports]
             for port in missing_inbound_ports:
                 port = int(port)
-                cidr = '0.0.0.0/0'  # TODO: Determine security implications of this (display warning to user?)
                 sgroup.authorize('tcp', port, port, cidr)
 
             # Update outbound rules
             outbound_rules = sgroup.rules_egress
             has_all_outbound_open = bool([rule.ip_protocol for rule in outbound_rules if rule.ip_protocol == '-1'])
             if not has_all_outbound_open:
-                pass  # TODO: update outbound rules
+                existing_outbound_ports = [rule.from_port for rule in outbound_rules]
+                missing_outbound_ports = [
+                    port for port in outbound_listener_ports if port not in existing_outbound_ports]
+                for port in missing_outbound_ports:
+                    self.ec2_conn.authorize_security_group_egress(
+                        sgroup.id, 'tcp', from_port=port, to_port=port, cidr_ip=cidr)
 
     def configure_access_logs(self, elb_name=None, elb=None):
         req_params = self.request.params
