@@ -329,9 +329,9 @@ class BaseELBView(TaggedItemView):
         elb = elb or self.get_elb(elb_name=elb_name)
         inbound_listener_ports = [str(listener[0]) for listener in listener_args]
         outbound_listener_ports = [str(listener[1]) for listener in listener_args]
-        health_check_ping_port = self.request.params.get('ping_port')
+        health_check_ping_port = self.request.params.get('ping_port') or self.get_health_check_port(elb)
         outbound_listener_ports.extend([health_check_ping_port])
-        security_group_ids = elb.security_groups
+        security_group_ids = self.request.params.getall('securitygroup')
         security_groups = self.ec2_conn.get_all_security_groups(filters={'group-id': security_group_ids})
         cidr = '0.0.0.0/0'  # TODO: Determine security implications of this (display warning to user?)
 
@@ -339,7 +339,8 @@ class BaseELBView(TaggedItemView):
             # Update inbound rules
             inbound_rules = sgroup.rules
             existing_inbound_ports = [rule.from_port for rule in inbound_rules]
-            missing_inbound_ports = [port for port in inbound_listener_ports if port not in existing_inbound_ports]
+            missing_inbound_ports = set(
+                [port for port in inbound_listener_ports if port not in existing_inbound_ports])
             for port in missing_inbound_ports:
                 port = int(port)
                 sgroup.authorize('tcp', port, port, cidr)
@@ -349,8 +350,8 @@ class BaseELBView(TaggedItemView):
             has_all_outbound_open = bool([rule.ip_protocol for rule in outbound_rules if rule.ip_protocol == '-1'])
             if not has_all_outbound_open:
                 existing_outbound_ports = [rule.from_port for rule in outbound_rules]
-                missing_outbound_ports = [
-                    port for port in outbound_listener_ports if port not in existing_outbound_ports]
+                missing_outbound_ports = set([
+                    port for port in outbound_listener_ports if port not in existing_outbound_ports])
                 for port in missing_outbound_ports:
                     self.ec2_conn.authorize_security_group_egress(
                         sgroup.id, 'tcp', from_port=port, to_port=port, cidr_ip=cidr)
@@ -732,7 +733,7 @@ class ELBView(BaseELBView):
                 if backend_certificates is not None and backend_certificates != '[]':
                     self.handle_backend_certificate_create(self.elb.name)
                 if self.vpc_network != 'None' and auto_update_security_groups:
-                    self.configure_security_groups(listeners_args, elb_name=self.elb.name)
+                    self.configure_security_groups(listeners_args, elb=self.elb)
                 msg = _(u"Updating load balancer")
                 self.log_request(u"{0} {1}".format(msg, self.elb.name))
                 prefix = _(u'Successfully updated load balancer.')
