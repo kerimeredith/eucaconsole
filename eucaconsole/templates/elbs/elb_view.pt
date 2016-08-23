@@ -34,6 +34,8 @@
                     <input type="checkbox" name="elb_ssl_server_order_pref" id="ssl_server_order_pref_hidden_input" />
                     <input type="checkbox" name="elb_ssl_using_custom_policy" id="ssl_using_custom_policy" />
                 </div>
+                <input type="checkbox" ng-model="autoUpdateSecurityGroups" class="hide"
+                       name="auto_update_security_groups" id="auto_update_security_groups" />
                 <dl id="elb-view-tabs" class="tabs">
                     <dd class="active"><a i18n:translate="">General</a></dd>
                     <dd><a href="${request.route_path('elb_monitoring', id=elb.name)}" i18n:translate="">Monitoring</a></dd>

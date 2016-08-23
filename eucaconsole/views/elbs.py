@@ -658,6 +658,7 @@ class ELBView(BaseELBView):
 
         self.create_bucket_form = CreateBucketForm(self.request, formdata=self.request.params or None)
         self.delete_form = ELBDeleteForm(self.request, formdata=self.request.params or None)
+        self.vpc_network = self.get_vpc_network_name(self.elb)
         bucket_name = self.access_logs.s3_bucket_name
         logs_prefix = self.access_logs.s3_bucket_prefix
         logs_subpath = logs_prefix.split('/') if logs_prefix else []
@@ -689,7 +690,7 @@ class ELBView(BaseELBView):
             protocol_list=self.get_protocol_list(),
             listener_list=self.get_listener_list(),
             is_vpc_supported=self.is_vpc_supported,
-            elb_vpc_network=self.get_vpc_network_name(self.elb),
+            elb_vpc_network=self.vpc_network,
             security_group_placeholder_text=_(u'Select...'),
             create_bucket_form=self.create_bucket_form,
             controller_options_json=self.get_controller_options_json(),
@@ -712,6 +713,7 @@ class ELBView(BaseELBView):
             prefix = _(u'Unable to update load balancer')
             template = u'{0} {1} - {2}'.format(prefix, self.elb.name, '{0}')
             backend_certificates = self.request.params.get('backend_certificates') or None
+            auto_update_security_groups = self.request.params.get('auto_update_security_groups') == 'on'
             with boto_error_handler(self.request, location, template):
                 self.update_elb_idle_timeout(self.elb.name, idle_timeout)
                 self.update_listeners(listeners_args)
@@ -724,6 +726,8 @@ class ELBView(BaseELBView):
                     self.elb_conn.apply_security_groups_to_lb(self.elb.name, securitygroup)
                 if backend_certificates is not None and backend_certificates != '[]':
                     self.handle_backend_certificate_create(self.elb.name)
+                if self.vpc_network != 'None' and auto_update_security_groups:
+                    self.configure_security_groups(listeners_args, elb_name=self.elb.name)
                 msg = _(u"Updating load balancer")
                 self.log_request(u"{0} {1}".format(msg, self.elb.name))
                 prefix = _(u'Successfully updated load balancer.')

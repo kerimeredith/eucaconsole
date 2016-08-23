@@ -48,6 +48,7 @@ angular.module('ELBPage', ['EucaConsoleUtils', 'ELBListenerEditor', 'ELBSecurity
         $scope.accessLogConfirmationDialog = $('#elb-bucket-access-log-dialog');
         $scope.accessLogConfirmationDialogKey = 'doNotShowAccessLogConfirmationAgain';
         $scope.unsavedChangesWarningModalLeaveCallback = null;
+        $scope.autoUpdateSecurityGroups = true;
         $scope.initController = function (optionsJson) {
             var options = JSON.parse(eucaUnescapeJson(optionsJson));
             $scope.setInitialValues(options);
